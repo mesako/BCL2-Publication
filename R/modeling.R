@@ -2,7 +2,7 @@ rm(list = ls())
 
 pre.folder <- "/Users/mesako/Desktop/20180211_Bcl-2_Analysis/"
 setwd(pre.folder)
-source("20180910_Bcl-2_Classification_Model_Support.R")
+source("modeling_support.R")
 
 seed.X <- 1
 set.seed(seed.X)
