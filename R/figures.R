@@ -67,135 +67,6 @@ Bcl2.rf.dex.on.BakBaxDKO.roc <- readRDS(paste("roc_curves/", pre, "_live_accurac
 
 setwd("/Users/mesako/Desktop/20180211_Bcl-2_Analysis/20180710_Bcl-2_New_SVG_Figures")
 
-# FIGURE 1C
-save.palette <- colorRampPalette(c("#1500FB", "#C3C3C7", "#D10100"))
-save.palette <- save.palette(100)
-
-asymm.palette1 <- colorRampPalette(c("#1500FB", "#C3C3C7"))
-asymm.palette2 <- colorRampPalette(c("#C3C3C7", "#D10100"))
-asymm.palette <- asymm.palette1(34)
-asymm.palette <- c(asymm.palette, asymm.palette2(67)[-1])
-
-cell.line.data <- read.csv("/Users/mesako/Downloads/Bcl2_WB_CyTOF_Comparison/20180430_MM_cell_lines_Bcl2_mean_stats.csv", header = TRUE)
-
-colnames(cell.line.data) <- c("FCS_File", "Mcl1", "Bcl2", "BclxL", "Bim",
-                              "active_Bak", "Bak", "active_Bax", "Bax")
-cell.line.data$FCS_File <- c("AMO1", "EJM", "H929", "KMS-12-BM", "KMS-12-PE",
-                             "KMS-28-BM", "KMS-28-PE", "KMS-34", "MM1R",
-                             "MM1S", "OPM2", "U266B1")
-cell.line.data[2:ncol(cell.line.data)] <- apply(cell.line.data[2:ncol(cell.line.data)], 2, FLOWMAPR:::Asinh)
-cell.line.data <- cell.line.data[, setdiff(colnames(cell.line.data), c("active_Bax", "Bak"))]
-cell.line.data <- cell.line.data[, c(1:5, 7, 6)]
-
-first.row <- t(cell.line.data)[1, ]
-flip.data <- as.data.frame(t(cell.line.data[, 2:ncol(cell.line.data)]))
-flip.data <- rbind(FCS_File = first.row, flip.data)
-for (x in 2:nrow(flip.data)) {
-  flip.data[x, ] <- as.numeric(flip.data[x, ])
-}
-
-plot.name <- paste("MM_cell_lines_Bcl2_profiles_flipped_heatmap_no_text.svg", sep = "")
-# plot.name <- paste("MM_cell_lines_Bcl2_profiles_flipped_heatmap.svg", sep = "")
-svg(plot.name, width = 8, height = 6)
-MakeHeatmapFlippedNoText(flip.data, which.scale = "row",
-                         colorpalette = save.palette, xlab = "FCS_File", ylab = "Markers")
-# MakeHeatmapFlipped(flip.data, which.scale = "row",
-#                    colorpalette = save.palette, xlab = "FCS_File", ylab = "Markers")
-dev.off()
-
-# FIGURE 1E
-WB.data <- read.csv("/Users/mesako/Downloads/Bcl2_WB_CyTOF_Comparison/20180213_MM_cell_lines_WB_data.csv", header = TRUE)
-CyTOF.data <- read.csv("/Users/mesako/Downloads/Bcl2_WB_CyTOF_Comparison/20180430_MM_cell_lines_Bcl2_mean_stats.csv", header = TRUE)
-WB.data$Cell_Line <- as.character(WB.data$Cell_Line)
-CyTOF.data$FCS.Filename <- as.character(CyTOF.data$FCS.Filename)
-
-WB.data <- WB.data[!(WB.data$Cell_Line == ""), ]
-WB.data <- WB.data[, setdiff(colnames(WB.data), "HSP70")]
-colnames(WB.data)[grepl(colnames(WB.data), pattern = "Bak")] <- "active_Bak"
-WB.data <- WB.data[, c(1:4, 7, 5:6)]
-
-colnames(CyTOF.data) <- c("Cell_Line", "active_Bax", "Bak", "BclxL", "Bax",
-                          "active_Bak", "Bcl2", "Mcl1", "Bim")
-CyTOF.data$Cell_Line <- c("AMO1", "EJM", "H929", "KMS-12-BM", "KMS-12-PE",
-                          "KMS-28-BM", "KMS-28-PE", "KMS-34", "MM1R",
-                          "MM1S", "OPM2", "U266B1")
-
-CyTOF.data[2:ncol(CyTOF.data)] <- apply(CyTOF.data[2:ncol(CyTOF.data)], 2, FLOWMAPR:::Asinh)
-CyTOF.data <- CyTOF.data[, setdiff(colnames(CyTOF.data), c("active_Bax", "Bak"))]
-CyTOF.data[2:ncol(CyTOF.data)] <- apply(CyTOF.data[2:ncol(CyTOF.data)], 2, rescale)
-CyTOF.data <- CyTOF.data[, c(1, 6, 5, 2, 7, 3, 4)]
-
-for (x in 2:ncol(CyTOF.data)) {
-  this.compare <- colnames(CyTOF.data)[x]
-  v1 <- CyTOF.data[, this.compare]
-  v2 <- WB.data[, this.compare]
-  temp <- data.frame(v1, v2)
-  this.cor1 <- cor(v1, v2, method = "pearson")
-  this.cor2 <- cor(v1, v2, method = "spearman")
-  this.cor1 <- round(this.cor1, digits = 4)
-  this.cor2 <- round(this.cor2, digits = 4)
-  cat("CyTOF", this.compare, "and WB", this.compare, "Pearson","=", this.cor1, "\n")
-  cat("CyTOF", this.compare, "and WB", this.compare, "Spearman", "=", this.cor2, "\n")
-  grob <- grobTree(textGrob(paste("Pearson Cor:", this.cor1, "\n", "Spearman Cor:", this.cor2, sep = " "),
-                            x = 0.1,  y = 0.95, hjust = 0,
-                            gp = gpar(col="black", fontsize = 10)))
-  this.plot <- ggplot(temp, aes(v1, v2)) + geom_point() +  
-    geom_smooth(method = "lm") + xlab(paste("CyTOF_", this.compare, sep = "")) + 
-    ylab(paste("WB_", this.compare, sep = ""))
-  # + geom_text(aes(label = CyTOF.data[, 1]), hjust = 0.5, vjust = -0.5)
-  # this.plot <- this.plot + annotation_custom(grob)
-  this.plot <- this.plot + theme(
-    plot.title = element_blank(),
-    axis.title.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    axis.title.y = element_blank(),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank())
-  
-  plot.name <- paste("CyTOF_vs_WB_", this.compare, "_no_text.svg", sep = "")
-  # plot.name <- paste("CyTOF_vs_WB_", this.compare, ".svg", sep = "")
-  svg(plot.name, width = 6, height = 6)
-  print(this.plot)
-  dev.off()
-}
-
-WB.data[2:ncol(WB.data)] <- apply(WB.data[2:ncol(WB.data)], 2, rescale)
-
-for (x in 2:ncol(CyTOF.data)) {
-  this.compare <- colnames(CyTOF.data)[x]
-  v1 <- CyTOF.data[, this.compare]
-  v2 <- WB.data[, this.compare]
-  temp <- data.frame(v1, v2)
-  this.cor1 <- cor(v1, v2, method = "pearson")
-  this.cor2 <- cor(v1, v2, method = "spearman")
-  this.cor1 <- round(this.cor1, digits = 4)
-  this.cor2 <- round(this.cor2, digits = 4)
-  cat("CyTOF", this.compare, "and WB", this.compare, "Pearson","=", this.cor1, "\n")
-  cat("CyTOF", this.compare, "and WB", this.compare, "Spearman", "=", this.cor2, "\n")
-  grob <- grobTree(textGrob(paste("Pearson Cor:", this.cor1, "\n", "Spearman Cor:", this.cor2, sep = " "),
-                            x = 0.1,  y = 0.95, hjust = 0,
-                            gp = gpar(col="black", fontsize = 10)))
-  this.plot <- ggplot(temp, aes(v1, v2)) + geom_point() +  
-    geom_smooth(method = "lm") + xlab(paste("CyTOF_", this.compare, sep = "")) + 
-    ylab(paste("WB_", this.compare, sep = ""))
-  # + geom_text(aes(label = CyTOF.data[, 1]), hjust = 0.5, vjust = -0.5)
-  # this.plot <- this.plot + annotation_custom(grob)
-  this.plot <- this.plot + theme(
-    plot.title = element_blank(),
-    axis.title.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    axis.title.y = element_blank(),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank())  
-  plot.name <- paste("CyTOF_vs_WB_", this.compare, "_WB_rescaled_no_text.svg", sep = "")
-  # plot.name <- paste("CyTOF_vs_WB_", this.compare, "_WB_rescaled.svg", sep = "")
-  svg(plot.name, width = 6, height = 6)
-  print(this.plot)
-  dev.off()
-}
-
 # FIGURE 2B
 treatment.data1 <- read.csv("/Users/mesako/Downloads/Bcl2_Heatmaps/20180328_MM1S_run_3A_exported_stats.csv", header = TRUE)
 treatment.data2 <- read.csv("/Users/mesako/Downloads/Bcl2_Heatmaps/20180328_MM1S_run_3B_exported_stats.csv", header = TRUE)
@@ -262,7 +133,7 @@ PlotTreeVarImpNoText(most.rf.dex.fit, "rf", paste(pre, "_most_rf_dex_fit_varimp_
 PlotTreeVarImpNoText(Bcl2.rf.bor.fit, "rf", paste(pre, "_Bcl2_rf_bor_fit_varimp_run3_no_text.svg", sep = ""))
 PlotTreeVarImpNoText(Bcl2.rf.dex.fit, "rf", paste(pre, "_Bcl2_rf_dex_fit_varimp_run3_no_text.svg", sep = ""))
 
-# FIGURE 5B
+# FIGURE 4E
 # PlotMultipleROC(list(run1.rf.most.bor.roc, run2.rf.most.bor.roc, most.rf.bor.roc),
 #                 c("Run1", "Run2", "Run3"),
 #                 output.name = "run_comparison_rf_bortezomib_most_models")
@@ -287,22 +158,7 @@ PlotMultipleROCNoText(list(run1.rf.Bcl2.bor.roc, run2.rf.Bcl2.bor.roc, Bcl2.rf.b
 PlotMultipleROCNoText(list(run1.rf.Bcl2.dex.roc, run2.rf.Bcl2.dex.roc, Bcl2.rf.dex.roc),
                       output.name = "run_comparison_rf_dexamethasone_Bcl2_models")
 
-# FIGURE 6D
-# PlotMultipleROC(list(most.rf.dex.roc, most.rf.dex.on.BakBaxDKO.roc),
-#                 c("WT", "BakBaxDKO"),
-#                 output.name = "live_most_rf_dexamethasone_on_BakBaxDKO")
-# 
-# PlotMultipleROC(list(Bcl2.rf.dex.roc, Bcl2.rf.dex.on.BakBaxDKO.roc),
-#                 c("WT", "BakBaxDKO"),
-#                 output.name = "live_Bcl2_rf_dexamethasone_on_BakBaxDKO")
-
-PlotMultipleROCNoText(list(most.rf.dex.roc, most.rf.dex.on.BakBaxDKO.roc),
-                      output.name = "live_most_rf_dexamethasone_on_BakBaxDKO")
-
-PlotMultipleROCNoText(list(Bcl2.rf.dex.roc, Bcl2.rf.dex.on.BakBaxDKO.roc),
-                      output.name = "live_Bcl2_rf_dexamethasone_on_BakBaxDKO")
-
-# FIGURE 7C
+# FIGURE 5E
 # PlotMultipleROC(list(most.rf.bor.roc, most.rf.dex.roc,
 #                      most.rf.bor.on.dex.roc,
 #                      most.rf.dex.on.bor.roc),
